@@ -63,11 +63,14 @@ function simulate(s,f,home,away,isUserHome){
   drawStats();
 
   simTimer=setInterval(()=>{
-    min+=2;
+    min++;
     minEl.textContent=min>=90?"90+'":min+"'";
     progEl.style.width=Math.min(100,min/90*100)+"%";
+    let hadAction=false;
     if(Math.random()<homeShotRate){
       shotsH++;
+      hadAction=true;
+      if(Math.random()<.45) addEvent(`📣 ${esc(home.name)} chega ao ataque e finaliza.`,"shot");
       if(Math.random()<homeConv){
         hg++;playSound("goal");
         const scorer=creditGoal(homeRoster);
@@ -76,18 +79,27 @@ function simulate(s,f,home,away,isUserHome){
     }
     if(Math.random()<awayShotRate){
       shotsA++;
+      hadAction=true;
+      if(Math.random()<.45) addEvent(`📣 ${esc(away.name)} responde e leva perigo ao gol adversário.`,"shot");
       if(Math.random()<awayConv){
         ag++;playSound("goal");
         const scorer=creditGoal(awayRoster);
         addEvent(`⚽ GOL do ${esc(away.name)}!${scorer?" "+esc(scorer.name)+" balança as redes.":""}`,"goal");
       }
     }
-    if(Math.random()<.05){playSound("card");addEvent(`🟨 Cartão amarelo para o ${Math.random()<.5?esc(home.name):esc(away.name)}.`);}
-    else if(Math.random()<.04) addEvent(`🔄 Substituição no ${Math.random()<.5?esc(home.name):esc(away.name)}.`);
+    if(Math.random()<.05){hadAction=true;playSound("card");addEvent(`🟨 Cartão amarelo para o ${Math.random()<.5?esc(home.name):esc(away.name)}.`);}
+    else if(Math.random()<.04){hadAction=true;addEvent(`🔄 Substituição no ${Math.random()<.5?esc(home.name):esc(away.name)}.`);}
+    if(!hadAction&&Math.random()<.7){
+      const leading=posH>=55?home.name:posH<=45?away.name:null;
+      const commentary=leading
+        ? `${esc(leading)} troca passes e controla o ritmo da partida.`
+        : "As duas equipes disputam o meio-campo em um jogo equilibrado.";
+      addEvent(commentary,"commentary");
+    }
     scoreEl.textContent=`${hg} — ${ag}`;
     drawStats();
     if(min>=90){clearInterval(simTimer);finishMatch(s,f,home,away,isUserHome,hg,ag,shotsH,shotsA,posH,events);}
-  },100);
+  },300);
 }
 
 function finishMatch(s,f,home,away,isUserHome,hg,ag,shotsH,shotsA,posH,events){
