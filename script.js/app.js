@@ -138,6 +138,12 @@ function playSound(kind){
 /* ---------- 3. save ---------- */
 function defaultManager(){return {confidence:75,matches:0,wins:0,draws:0,losses:0,points:0,warnings:0,status:"active",history:[]};}
 function defaultTactic(){return {formation:"4-3-3",mentality:"Equilibrada",pressing:"Médio",tempo:"Normal",marking:"Zona",width:"Normal",defensiveLine:"Normal",setPieces:"Equilibrado"};}
+function defaultClubFinances(s){
+  const finances={};
+  GAME_TEAMS.forEach(team=>{finances[team.id]={balance:Math.round(4000000+team.strength*100000),income:0,expenses:0};});
+  if(s?.clubId) finances[s.clubId]=s.finance||finances[s.clubId];
+  return finances;
+}
 
 function loadGame(){
   let s=null;
@@ -158,6 +164,8 @@ function migrate(s){
   if(!FORMATIONS[s.tactic.formation]) s.tactic.formation="4-3-3";
   s.teamStats=Object.assign({played:0,wins:0,draws:0,losses:0,goalsFor:0,goalsAgainst:0,shots:0,possession:0},s.teamStats);
   s.finance=Object.assign({balance:0,income:0,expenses:0,history:[]},s.finance);
+  s.clubFinances=Object.assign(defaultClubFinances(s),s.clubFinances);
+  if(!Array.isArray(s.transferHistory)) s.transferHistory=[];
   s.squad.forEach(p=>{p.goals=p.goals||0;p.assists=p.assists||0;p.cards=p.cards||0;p.matches=p.matches||0;});
   if(!s.objectiveRank) s.objectiveRank=8;
   if(!Array.isArray(s.seasonHistory)) s.seasonHistory=[];
@@ -205,6 +213,37 @@ function buildMarket(s){
   POSITIONS.forEach(pos=>shuffle(pool.filter(p=>p.position===pos)).slice(0,14).forEach(p=>out.push(p)));
   return out;
 }
+function recordTransfer(s,buyerId,sellerId,player,value,source){
+  s.transferHistory.unshift({date:today(),season:s.season,round:s.round,buyerId,sellerId,playerId:player.originalId||player.id,playerName:player.name,position:player.position,rating:player.rating,value,source:source||"Mercado"});
+  s.transferHistory=s.transferHistory.slice(0,100);
+}
+function removeOriginalPlayer(s,teamId,originalId){
+  const list=s.allPlayers[teamId]||[],index=list.findIndex(p=>p.id===originalId);
+  return index<0?null:list.splice(index,1)[0];
+}
+function weakestPosition(players){
+  return POSITIONS.map(position=>{
+    const list=players.filter(p=>p.position===position);
+    return {position,average:list.length?list.reduce((sum,p)=>sum+p.rating,0)/list.length:0,count:list.length};
+  }).sort((a,b)=>(a.count?0:-1)-(b.count?0:-1)||a.average-b.average)[0].position;
+}
+function simulateAITransfers(s){
+  GAME_TEAMS.filter(team=>team.id!==s.clubId).forEach(team=>{
+    if(Math.random()>.22)return;
+    const budget=s.clubFinances[team.id];
+    const squad=s.allPlayers[team.id]||[],position=weakestPosition(squad);
+    const target=s.market.filter(p=>p.position===position&&p.ownerId!==team.id&&p.ownerId!==s.clubId&&p.price<=budget.balance*.72).sort((a,b)=>b.rating-a.rating||a.price-b.price)[0];
+    if(!target)return;
+    const sellerId=target.ownerId,original=removeOriginalPlayer(s,sellerId,target.originalId);
+    if(!original)return;
+    const value=target.price;
+    squad.push({...original,teamId:team.id});
+    budget.balance-=value;budget.expenses+=value;
+    if(s.clubFinances[sellerId]){s.clubFinances[sellerId].balance+=Math.round(value*.85);s.clubFinances[sellerId].income+=Math.round(value*.85);}
+    s.market=s.market.filter(p=>p.id!==target.id);
+    recordTransfer(s,team.id,sellerId,target,value,"IA");
+  });
+}
 function objectiveFor(strength){
   if(strength>=80) return {rank:4,text:"Terminar entre os 4 primeiros"};
   if(strength>=74) return {rank:8,text:"Terminar entre os 8 primeiros"};
@@ -223,12 +262,15 @@ function newCareer(teamId){
     managerName:getLogin()?.name||"Treinador",
     allPlayers,schedule:createSchedule(ids),standings:initialStandings(ids),
     finance:{balance:15000000,income:15000000,expenses:0,history:[{date:today(),type:"Receita",description:"Patrocínio inicial",value:15000000}]},
+    clubFinances:{},transferHistory:[],
     teamStats:{played:0,wins:0,draws:0,losses:0,goalsFor:0,goalsAgainst:0,shots:0,possession:0},
     settings:{sound:true,compact:false},
     tactic:defaultTactic(),tacticalXI:[],
     trophies:0,objective:obj.text,objectiveRank:obj.rank,seasonHistory:[],
     lastMatch:null,manager:defaultManager()
   };
+  state.clubFinances=defaultClubFinances(state);
+  state.clubFinances[teamId]=state.finance;
   state.market=buildMarket(state);
   fixLineup(state);
   saveGame(state);
@@ -447,6 +489,7 @@ function simulateOtherMatches(s){
   recalcStandings(s);
 }
 function advanceRound(s){
+  simulateAITransfers(s);
   simulateOtherMatches(s);
   s.round++;
   const wages=weeklyWages(s);

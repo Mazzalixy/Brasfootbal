@@ -57,6 +57,15 @@ function simulate(s,f,home,away,isUserHome){
     evEl.innerHTML=events.slice().reverse().map(e=>`<div class="note ${e.cls||""}"><b style="color:var(--gold)">${e.min}'</b> ${e.text}</div>`).join("");
     evEl.scrollTop=0;
   }
+  function teamLabel(team){return esc(team.name);}
+  function shotComment(team,opponent){
+    const shooter=team===home?homeRoster:awayRoster;
+    const player=shooter.filter(p=>p.position==="ATA"||p.position==="MEI").sort((a,b)=>b.rating-a.rating)[Math.floor(Math.random()*Math.min(3,shooter.length))];
+    const name=player?` ${esc(player.name)}`:"";
+    return Math.random()<.5
+      ? `${teamLabel(team)} constrói a jogada e${name} finaliza, mas a defesa do ${teamLabel(opponent)} afasta o perigo.`
+      : `${teamLabel(team)} chega pela frente e${name} arrisca o chute. A bola não entra.`;
+  }
   function drawStats(){
     statsEl.innerHTML=statRow("Finalizações",shotsH,shotsA)+statRow("Posse de bola",posH,100-posH,"%");
   }
@@ -66,40 +75,48 @@ function simulate(s,f,home,away,isUserHome){
     min++;
     minEl.textContent=min>=90?"90+'":min+"'";
     progEl.style.width=Math.min(100,min/90*100)+"%";
-    let hadAction=false;
     if(Math.random()<homeShotRate){
       shotsH++;
-      hadAction=true;
-      if(Math.random()<.45) addEvent(`📣 ${esc(home.name)} chega ao ataque e finaliza.`,"shot");
       if(Math.random()<homeConv){
         hg++;playSound("goal");
         const scorer=creditGoal(homeRoster);
-        addEvent(`⚽ GOL do ${esc(home.name)}!${scorer?" "+esc(scorer.name)+" balança as redes.":""}`,"goal");
+        addEvent(`⚽ GOL do ${teamLabel(home)}!${scorer?` ${esc(scorer.name)} finaliza e balança as redes.`:" A finalização vence o goleiro."} Placar: ${hg} x ${ag}.`,"goal");
+      }else if(Math.random()<.8){
+        addEvent(shotComment(home,away),"shot");
       }
     }
     if(Math.random()<awayShotRate){
       shotsA++;
-      hadAction=true;
-      if(Math.random()<.45) addEvent(`📣 ${esc(away.name)} responde e leva perigo ao gol adversário.`,"shot");
       if(Math.random()<awayConv){
         ag++;playSound("goal");
         const scorer=creditGoal(awayRoster);
-        addEvent(`⚽ GOL do ${esc(away.name)}!${scorer?" "+esc(scorer.name)+" balança as redes.":""}`,"goal");
+        addEvent(`⚽ GOL do ${teamLabel(away)}!${scorer?` ${esc(scorer.name)} finaliza e balança as redes.`:" A finalização vence o goleiro."} Placar: ${hg} x ${ag}.`,"goal");
+      }else if(Math.random()<.8){
+        addEvent(shotComment(away,home),"shot");
       }
     }
-    if(Math.random()<.05){hadAction=true;playSound("card");addEvent(`🟨 Cartão amarelo para o ${Math.random()<.5?esc(home.name):esc(away.name)}.`);}
-    else if(Math.random()<.04){hadAction=true;addEvent(`🔄 Substituição no ${Math.random()<.5?esc(home.name):esc(away.name)}.`);}
-    if(!hadAction&&Math.random()<.7){
-      const leading=posH>=55?home.name:posH<=45?away.name:null;
-      const commentary=leading
-        ? `${esc(leading)} troca passes e controla o ritmo da partida.`
-        : "As duas equipes disputam o meio-campo em um jogo equilibrado.";
-      addEvent(commentary,"commentary");
+    if(Math.random()<.05){
+      playSound("card");
+      const team=Math.random()<.5?home:away;
+      addEvent(`🟨 Cartão amarelo: ${teamLabel(team)} chega atrasado na disputa e é advertido.`,"card");
+    }else if(Math.random()<.04){
+      const team=Math.random()<.5?home:away;
+      addEvent(`🔄 ${teamLabel(team)} faz uma substituição para renovar o ritmo da equipe.`);
+    }else if(min===1){
+      addEvent(`▶️ Bola rolando. ${teamLabel(home)} e ${teamLabel(away)} começam a partida.`,"commentary");
+    }else if(min===45){
+      addEvent(`⏸️ Intervalo: ${teamLabel(home)} ${hg} x ${ag} ${teamLabel(away)}. Finalizações: ${shotsH} x ${shotsA}.`,"commentary");
+    }else if(min>45&&min%5===0){
+      const leader=posH>=55?home:posH<=45?away:null;
+      addEvent(leader?`${teamLabel(leader)} controla mais a bola, mas o placar continua ${hg} x ${ag}.`:`O jogo segue equilibrado no meio-campo. Placar: ${hg} x ${ag}.`,"commentary");
     }
     scoreEl.textContent=`${hg} — ${ag}`;
     drawStats();
-    if(min>=90){clearInterval(simTimer);finishMatch(s,f,home,away,isUserHome,hg,ag,shotsH,shotsA,posH,events);}
-  },300);
+    if(min>=90){
+      addEvent(`🏁 Apito final: ${teamLabel(home)} ${hg} x ${ag} ${teamLabel(away)}.`,"commentary");
+      clearInterval(simTimer);finishMatch(s,f,home,away,isUserHome,hg,ag,shotsH,shotsA,posH,events);
+    }
+  },167);
 }
 
 function finishMatch(s,f,home,away,isUserHome,hg,ag,shotsH,shotsA,posH,events){
