@@ -22,12 +22,13 @@ document.addEventListener("DOMContentLoaded",()=>{
         </div>
         <p id="tradeInfo" class="muted small" style="margin:12px 0 0"></p>
       </section>`;
-      c.innerHTML+=`<section class="panel mt"><div class="panel-head"><div><h2>Histórico de contratações</h2><p class="muted">Movimentações realizadas pelos clubes durante o campeonato.</p></div></div><div class="table-wrap"><table><thead><tr><th>Rodada</th><th>Jogador</th><th>Clube comprador</th><th>Clube vendedor</th><th>Força</th><th class="num">Valor</th></tr></thead><tbody id="transferHistory"></tbody></table></div></section>`;
+      c.innerHTML+=`<section class="panel mt"><div class="panel-head"><div><h2>Histórico de contratações</h2><p class="muted">Movimentações realizadas pelos clubes durante o campeonato.</p></div></div><div class="table-wrap"><table><thead><tr><th>Rodada</th><th>Jogador</th><th>Clube comprador</th><th>Clube vendedor</th><th>Força</th><th class="num">Valor</th></tr></thead><tbody id="transferHistory"></tbody></table></div></section>
+      <section class="market-social mt"><div class="social-heading"><div><span class="badge blue">BF Social</span><h2>Notícias do mercado</h2><p class="muted">As principais contratações do campeonato em formato de feed.</p></div><span class="social-live">● ao vivo</span></div><div id="transferFeed" class="transfer-feed"></div></section>`;
     document.querySelectorAll("[data-pos]").forEach(b=>b.onclick=()=>{currentPos=b.dataset.pos;document.querySelectorAll("[data-pos]").forEach(x=>x.classList.toggle("active",x===b));drawGrid();});
     document.getElementById("marketSearch").oninput=drawGrid;
     document.getElementById("sellSelect").onchange=document.getElementById("buySelect").onchange=updateTradeInfo;
     document.getElementById("tradeBtn").onclick=trade;
-    drawGrid();fillTradeSelects();drawHistory();
+    drawGrid();fillTradeSelects();drawHistory();drawFeed();
   }
   function drawGrid(){
     const q=(document.getElementById("marketSearch")?.value||"").toLowerCase();
@@ -60,6 +61,14 @@ document.addEventListener("DOMContentLoaded",()=>{
     const box=document.getElementById("transferHistory");
     const history=s.transferHistory||[];
     box.innerHTML=history.slice(0,30).map(item=>`<tr><td>R${item.round}</td><td><b>${esc(item.playerName)}</b><small class="muted" style="display:block">${item.position}</small></td><td>${esc(teamName(item.buyerId))}</td><td>${esc(teamName(item.sellerId))}</td><td>${item.rating}</td><td class="num">${moneyShort(item.value)}</td></tr>`).join("")||`<tr><td colspan="6"><div class="empty"><b>Nenhuma contratação registrada</b>As movimentações aparecerão conforme o campeonato avançar.</div></td></tr>`;
+  }
+  function drawFeed(){
+    const box=document.getElementById("transferFeed"),history=(s.transferHistory||[]).slice(0,12);
+    box.innerHTML=history.map(item=>{
+      const buyer=teamObj(item.buyerId),seller=teamObj(item.sellerId);
+      const player={name:item.playerName,position:item.position,rating:item.rating};
+      return `<article class="transfer-post"><div class="post-head"><div class="post-author">${crest(buyer,42)}<div><b>${esc(buyer.name||"Clube")}</b><small>Rodada ${item.round} • ${item.source==="IA"?"Mercado":"Negociação"}</small></div></div><button class="post-more" aria-label="Opções da publicação">•••</button></div><div class="post-transfer"><div class="post-club">${crest(buyer,58)}<b>${esc(buyer.short||buyer.name||"-")}</b></div><div class="post-arrow">→</div><div class="post-player">${avatar(player,"lg")}<b>${esc(player.name)}</b><small>${posLabel(player.position)} • Força ${player.rating}</small></div><div class="post-club"><span class="post-sold">saiu de</span>${crest(seller,58)}<b>${esc(seller.short||seller.name||"-")}</b></div></div><div class="post-caption"><b>${esc(buyer.name||"O clube")} anuncia:</b> ${esc(player.name)} é o novo reforço por <strong>${moneyShort(item.value)}</strong>.</div><div class="post-actions"><span>♡ Curtir</span><span>◌ Comentar</span><span>↗ Compartilhar</span></div></article>`;
+    }).join("")||`<div class="social-empty"><b>O feed está esperando a primeira contratação.</b><span>As notícias aparecerão quando os clubes movimentarem o mercado.</span></div>`;
   }
   function buy(id){
     const p=s.market.find(x=>x.id===id);if(!p)return;
