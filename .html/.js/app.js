@@ -282,6 +282,38 @@ function tacticEffects(t){
   return r;
 }
 
+/* Analise deterministica do elenco, tatica, mercado, financas e proximo jogo. */
+function analyzeAssistant(s,tacticState){
+  const tactic=tacticState||s.tactic,lineup=lineupPlayers(s);
+  const groups={attack:lineup.filter(x=>x.slot==="ATA"),midfield:lineup.filter(x=>["VOL","MEI"].includes(x.slot)),defense:lineup.filter(x=>["GOL","LAT","ZAG"].includes(x.slot))};
+  const scores={};
+  Object.keys(groups).forEach(key=>{const players=groups[key].filter(x=>x.player);scores[key]=players.length?Math.round(players.reduce((sum,x)=>sum+x.player.rating-(x.out?10:0),0)/players.length):0;});
+  const labels={attack:"ataque",midfield:"meio-campo",defense:"defesa"},weakest=Object.keys(scores).sort((a,b)=>scores[a]-scores[b])[0],recommendations=[];
+  if(scores[weakest]<72) recommendations.push({tone:"red",title:"Setor prioritario",text:`O ${labels[weakest]} e o setor mais fraco, com forca ${scores[weakest]}. Considere reforcar o setor no mercado ou proteger essa area com a tatica.`});
+  else recommendations.push({tone:"green",title:"Elenco equilibrado",text:`O setor mais fraco e o ${labels[weakest]}, ainda com boa forca (${scores[weakest]}). O elenco nao tem uma urgencia evidente.`});
+  const xi=new Set(s.tacticalXI);
+  POSITIONS.forEach(pos=>{const starter=s.squad.filter(p=>xi.has(p.id)&&p.position===pos).sort((a,b)=>b.rating-a.rating)[0],reserve=s.squad.filter(p=>!xi.has(p.id)&&p.position===pos).sort((a,b)=>b.rating-a.rating)[0];if(starter&&reserve&&reserve.rating>=starter.rating+3) recommendations.push({tone:"gold",title:"Opcao para titular",text:`${reserve.name} tem forca ${reserve.rating}, acima de ${starter.name} (${starter.rating}). Vale testar a troca na posicao ${POSITION_NAMES[pos].toLowerCase()}.`});});
+  let formation=tactic.formation,nextTactic={};
+  if(weakest==="defense"&&tactic.formation!=="5-3-2"){formation="5-3-2";nextTactic.defensiveLine="Baixa";nextTactic.mentality="Equilibrada";}
+  else if(weakest==="midfield"&&tactic.formation!=="3-5-2"){formation="3-5-2";nextTactic.mentality="Equilibrada";nextTactic.tempo="Lento";}
+  else if(weakest==="attack"&&tactic.formation!=="3-4-3"){formation="3-4-3";nextTactic.mentality="Ofensiva";nextTactic.tempo="Rapido";}
+  const suggestedChanges=Object.assign({formation},nextTactic);
+  recommendations.push({tone:formation!==tactic.formation?"blue":"green",title:formation!==tactic.formation?"Sugestao tatica":"Tatica atual",text:formation!==tactic.formation?`Para compensar o ${labels[weakest]}, experimente a formacao ${formation}${nextTactic.mentality?` com mentalidade ${nextTactic.mentality.toLowerCase()}`:""}.`:"A formacao atual ja protege o setor mais fraco. Mantenha o plano e observe o desempenho em campo."});
+  const fixture=currentFixture(s);
+  if(fixture){const home=fixture.homeId===s.clubId,opponent=getTeam(home?fixture.awayId:fixture.homeId),myTeam=teamObj(s.clubId);recommendations.push({tone:opponent.strength>myTeam.strength?"red":"gold",title:"Proximo adversario",text:`Na rodada ${fixture.round}, o adversario sera ${opponent.name}, forca ${opponent.strength}, ${home?"fora de casa":"em casa"}. ${opponent.strength>myTeam.strength?"Uma abordagem mais cautelosa pode reduzir os riscos.":"Voce chega com vantagem de forca no papel."}`});}
+  const targetPos=weakest==="attack"?"ATA":weakest==="midfield"?"MEI":"ZAG",marketTarget=s.market.filter(p=>p.position===targetPos).sort((a,b)=>b.rating-a.rating||a.price-b.price)[0];
+  if(marketTarget) recommendations.push({tone:s.finance.balance>=marketTarget.price?"green":"gold",title:"Mercado",text:`O melhor reforco disponivel para o setor indicado e ${marketTarget.name} (${marketTarget.rating}), por ${moneyShort(marketTarget.price)}${s.finance.balance<marketTarget.price?". O saldo atual ainda nao cobre a compra":". A contratacao cabe no saldo atual"}.`});
+  const form=recentForm(s,5),wins=form.filter(x=>x==="V").length,losses=form.filter(x=>x==="D").length;
+  recommendations.push({tone:losses>wins?"red":"green",title:"Momento recente",text:form.length?`Nos ultimos ${form.length} jogos: ${wins} vitoria(s), ${form.filter(x=>x==="E").length} empate(s) e ${losses} derrota(s).`:"Ainda nao ha jogos suficientes para avaliar a fase."});
+  return {scores,weakest,recommendations,suggestedChanges,fixture,form};
+}
+function applyAssistantSuggestion(s,changes){
+  if(!changes)return false;
+  if(FORMATIONS[changes.formation]) s.tactic.formation=changes.formation;
+  Object.keys(changes).filter(k=>k!=="formation"&&TACTIC_OPTIONS[k]?.values.includes(changes[k])).forEach(k=>s.tactic[k]=changes[k]);
+  fixLineup(s);return saveGame(s);
+}
+
 /* ---------- 6. temporada, resultados e diretoria ---------- */
 function currentFixture(s){
   for(const rd of s.schedule){
@@ -438,7 +470,7 @@ function canSell(s,p){
 /* ---------- 7. estrutura da página ---------- */
 const NAV_GROUPS=[
   {label:"Clube",items:[["menu","home","Menu"],["clube","shield","Clube"],["elenco","users","Elenco"],["mercado","swap","Mercado"]]},
-  {label:"Jogo",items:[["tactica","target","Tática"],["partida","play","Partida"],["jogos","calendar","Jogos"]]},
+  {label:"Jogo",items:[["assistente","wand","Assistente"],["tactica","target","Tática"],["partida","play","Partida"],["jogos","calendar","Jogos"]]},
   {label:"Competição",items:[["campeonato","trophy","Campeonato"],["classificacao","table","Classificação"],["artilharia","star","Artilharia"],["estatisticas","chart","Estatísticas"]]},
   {label:"Gestão",items:[["financas","wallet","Finanças"],["diretoria","building","Diretoria"],["configuracoes","gear","Configurações"]]}
 ];

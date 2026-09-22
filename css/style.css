@@ -211,6 +211,13 @@ tbody tr:hover td{background:#12291d}
 .dismissal-panel{border-color:#7a3038;background:#2a1418}
 .dismissal-panel h2{color:#ffb8b8;font-size:30px}
 .note{margin:14px 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#0a1a11}
+.assistant-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.assistant-card{padding:16px;border-left:3px solid var(--line)}
+.assistant-card p{margin:12px 0 0;color:var(--muted)}
+.assistant-card.red{border-left-color:var(--red)}.assistant-card.green{border-left-color:var(--green)}.assistant-card.gold{border-left-color:var(--gold)}.assistant-card.blue{border-left-color:var(--blue)}
+.badge.red{background:#441c22;color:#ff9c9c}.badge.green{background:#12402a;color:#8ff0b8}.badge.blue{background:#123553;color:#93ccff}
+.assistant-intro{display:flex;justify-content:space-between;gap:20px;align-items:end}.assistant-intro h2{margin-top:10px}.assistant-disclaimer{max-width:270px;color:var(--gold);font-size:13.5px;text-align:right}.assistant-plan{grid-template-columns:repeat(3,1fr)}
+@media(max-width:700px){.assistant-grid,.assistant-plan{grid-template-columns:1fr}.assistant-intro{display:block}.assistant-disclaimer{text-align:left;margin-top:14px}}
 
 /* aviso e diálogo */
 #toasts{position:fixed;right:20px;bottom:20px;z-index:80;display:grid;gap:8px;justify-items:end}

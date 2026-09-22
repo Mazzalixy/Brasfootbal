@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const ids=Object.keys(TACTIC_OPTIONS);
 
   c.innerHTML=`${pageHead("Tática e formação","Monte a escalação e defina o estilo de jogo do seu clube.",
-      `<button id="autoBtn" class="btn secondary">${icon("wand",18)}Escalação automática</button><button id="saveTactic" class="btn primary">${icon("check",18)}Salvar tática</button>`)}
+      `<button id="assistantBtn" class="btn secondary">${icon("wand",18)}Pedir ao Assistente</button><button id="autoBtn" class="btn secondary">${icon("wand",18)}Escalação automática</button><button id="saveTactic" class="btn primary">${icon("check",18)}Salvar tática</button>`)}
     <div class="tactic-layout">
       <section class="panel">
         <div class="panel-head"><h2>Campo</h2><span id="formationName" class="badge gold">${t.formation}</span></div>
@@ -26,7 +26,8 @@ document.addEventListener("DOMContentLoaded",()=>{
         <section class="panel"><h2>Dica do treinador</h2><p id="tip" class="muted" style="margin:0"></p></section>
         <section class="panel"><div class="panel-head"><h2>Titulares</h2><span class="muted small" id="strengthTag"></span></div><div class="starter-list" id="starterList"></div></section>
       </div>
-    </div>`;
+    </div>
+    <section id="assistantPanel" class="panel mt hidden"></section>`;
 
   function renderBoard(){
     const board=document.getElementById("playersBoard");
@@ -75,5 +76,11 @@ document.addEventListener("DOMContentLoaded",()=>{
   ids.forEach(id=>document.getElementById(id).onchange=()=>{t[id]=document.getElementById(id).value;refresh();});
   document.getElementById("autoBtn").onclick=()=>{autoLineup(s);saveGame(s);renderBoard();renderStarters();toast("Escalação automática aplicada.");};
   document.getElementById("saveTactic").onclick=()=>{saveGame(s);toast("Tática salva com sucesso.");};
+  document.getElementById("assistantBtn").onclick=()=>{
+    const result=analyzeAssistant(s,t),labels={attack:"Ataque",midfield:"Meio-campo",defense:"Defesa"},panel=document.getElementById("assistantPanel");
+    panel.classList.remove("hidden");
+    panel.innerHTML=`<div class="panel-head"><div><h2>Análise do Assistente</h2><p class="muted">Setor mais fraco: <b>${labels[result.weakest]}</b> (${result.scores[result.weakest]}).</p></div><button id="applyTacticSuggestion" class="btn primary">${icon("check",18)}Aplicar sugestão</button></div><div class="assistant-grid">${result.recommendations.slice(0,4).map(item=>`<article class="assistant-card ${item.tone}"><span class="badge ${item.tone}">${item.title}</span><p>${item.text}</p></article>`).join("")}</div>`;
+    document.getElementById("applyTacticSuggestion").onclick=()=>{applyAssistantSuggestion(s,result.suggestedChanges);t.formation=s.tactic.formation;ids.forEach(id=>document.getElementById(id).value=s.tactic[id]);document.getElementById("formationName").textContent=t.formation;document.querySelectorAll("[data-formation]").forEach(b=>b.classList.toggle("active",b.dataset.formation===t.formation));renderBoard();renderStarters();refresh();toast("Sugestão aplicada e salva. Revise a escalação antes de jogar.");};
+  };
   renderBoard();renderStarters();refresh();
 });
