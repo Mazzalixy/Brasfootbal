@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRASFOOTBALL - Configurações</title>
+<meta name="description" content="BRASFOOTBALL - Configurações da carreira">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2711%27 fill=%27%233ddc84%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="configuracoes">
+<div id="app"></div>
+<script src="js/dados.js"></script><script src="js/app.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const s = renderShell("Configurações");
+  if (!s) return;
+  const content = document.getElementById("pageContent");
+  content.innerHTML = `${pageHead("Configurações","Personalize sua carreira e controle o salvamento.")}
+    <div class="grid-2">
+      <section class="panel">
+        <h2>Preferências</h2>
+        <div class="toggle-row"><div><b>Modo compacto</b><br><small>Reduz espaçamentos para ver mais informação na tela.</small></div>
+          <label class="switch"><input id="compactMode" type="checkbox" ${s.settings.compact?"checked":""}><span></span></label></div>
+        <div class="toggle-row" style="border-bottom:0"><div><b>Sons</b><br><small>Apito, gols e cartões durante a simulação da partida.</small></div>
+          <label class="switch"><input id="soundMode" type="checkbox" ${s.settings.sound?"checked":""}><span></span></label></div>
+        <button class="btn primary mt" id="savePrefs">${icon("check",18)}Salvar preferências</button>
+      </section>
+      <section class="panel" style="border-color:#6e2a31">
+        <h2>Nova carreira</h2>
+        <p class="muted">Apaga a carreira atual deste navegador e volta à tela inicial. Essa ação não pode ser desfeita.</p>
+        <button class="btn danger mt" id="resetGame">${icon("warn",18)}Apagar carreira</button>
+      </section>
+    </div>`;
+  document.getElementById("savePrefs").onclick = () => {
+    const x = loadGame(); if (!x) return;
+    x.settings.compact = document.getElementById("compactMode").checked;
+    x.settings.sound = document.getElementById("soundMode").checked;
+    saveGame(x); applySettings(x); toast("Preferências salvas.");
+  };
+  document.getElementById("resetGame").onclick = async () => {
+    const ok = await askConfirm({title:"Apagar a carreira?", text:"Todo o progresso deste navegador será perdido, incluindo elenco, finanças e histórico.", ok:"Apagar carreira", danger:true});
+    if (ok) resetCareer();
+  };
+});
+</script>
+</body>
+</html>

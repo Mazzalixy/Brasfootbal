@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRASFOOTBALL - Login</title>
+<meta name="description" content="BRASFOOTBALL - Entre no seu perfil de treinador">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2711%27 fill=%27%233ddc84%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+<main class="login">
+  <section class="login-hero">
+    <h1>BRAS<b>FOOTBALL</b></h1>
+    <p class="lead">Assuma o comando de um clube brasileiro e conduza a temporada rodada a rodada.</p>
+    <ul class="login-facts" id="heroFacts"></ul>
+  </section>
+  <section class="login-card">
+    <div id="stepLogin">
+      <h2>Login do treinador</h2>
+      <p class="sub">Seu progresso fica salvo neste navegador, mesmo se você fechar a página.</p>
+      <div id="savedCard" class="saved hidden"></div>
+      <div class="field">
+        <label for="managerName">Nome do treinador</label>
+        <input id="managerName" class="input" type="text" maxlength="30" placeholder="Digite seu nome" autocomplete="name">
+      </div>
+      <p id="loginMsg" class="form-msg" role="alert"></p>
+      <div class="login-actions">
+        <button id="continueBtn" class="btn secondary">Continuar carreira</button>
+        <button id="newGameBtn" class="btn secondary">Nova carreira</button>
+      </div>
+    </div>
+    <div id="stepClub" class="hidden">
+      <div class="step-head"><button id="backBtn" class="btn ghost sm" aria-label="Voltar"></button><h2 style="margin:0">Escolha seu clube</h2></div>
+      <p class="sub">Selecione o time que você vai comandar nesta carreira.</p>
+      <div id="clubChoices" class="club-grid"></div>
+      <div class="club-bar hidden" id="clubBar">
+        <div class="picked" id="picked"></div>
+        <button id="startCareerBtn" class="btn primary" disabled>Começar carreira</button>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="js/dados.js"></script>
+<script src="js/app.js"></script>
+<script src="js/login.js"></script>
+</body>
+</html>
